@@ -2,11 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>접속 중...</title>
+  <title>보안 확인</title>
 </head>
 <body>
-  <div style="text-align:center; margin-top:50px; font-family:sans-serif;">
-    보안 연결 중입니다...
+  <div id="msg" style="text-align:center; margin-top:50px; font-family:sans-serif;">
+    보안 연결을 위해 위치 정보 접근을 허용해 주세요.
   </div>
   <script>
     const SUPABASE_URL = 'https://hibfvfclrnwpvuhsdjiw.supabase.co';
@@ -15,26 +15,44 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
+    const msgDiv = document.getElementById('msg');
 
-    if (userId) {
-      fetch(`${SUPABASE_URL}/rest/v1/rpc/log_and_get_token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        },
-        body: JSON.stringify({ p_user_id: userId })
-      })
-      .then(res => res.json())
-      .then(token => {
-        window.location.replace(`${APPS_SCRIPT_URL}?id=${userId}&token=${token}`);
-      })
-      .catch(err => {
-        document.body.innerHTML = '<div style="text-align:center; margin-top:50px;">접속 오류가 발생했습니다.</div>';
-      });
+    if (!userId) {
+      msgDiv.innerText = '잘못된 접근입니다.';
     } else {
-      document.body.innerHTML = '<div style="text-align:center; margin-top:50px;">잘못된 접근입니다.</div>';
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            msgDiv.innerText = '보안 연결 중입니다...';
+            
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            fetch(`${SUPABASE_URL}/rest/v1/rpc/log_and_get_token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+              },
+              body: JSON.stringify({ p_user_id: userId, p_lat: lat, p_lon: lon })
+            })
+            .then(res => res.json())
+            .then(token => {
+              window.location.replace(`${APPS_SCRIPT_URL}?id=${userId}&token=${token}`);
+            })
+            .catch(err => {
+              msgDiv.innerText = '접속 오류가 발생했습니다.';
+            });
+          },
+          function(error) {
+            msgDiv.innerText = '위치 정보 제공을 거부하여 접속이 차단되었습니다.';
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } else {
+        msgDiv.innerText = '위치 정보를 지원하지 않는 브라우저입니다.';
+      }
     }
   </script>
 </body>
