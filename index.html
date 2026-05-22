@@ -30,12 +30,14 @@
             let gpsRegion = "주소파싱실패";
 
             try {
-              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&accept-language=ko`);
+              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&accept-language=ko`);
               if (geoRes.ok) {
                 const geoData = await geoRes.json();
                 if (geoData.address) {
                   const a = geoData.address;
-                  gpsRegion = [a.province, a.city, a.county, a.borough, a.town, a.suburb, a.quarter, a.village].filter(Boolean).join(" ");
+                  gpsRegion = [a.province, a.city, a.county, a.borough, a.town, a.suburb, a.quarter, a.village, a.road, a.house_number, a.building, a.amenity].filter(Boolean).join(" ");
+                } else if (geoData.display_name) {
+                  gpsRegion = geoData.display_name;
                 }
               }
             } catch (e) {}
