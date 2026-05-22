@@ -22,11 +22,23 @@
     } else {
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
-          function(position) {
+          async function(position) {
             msgDiv.innerText = '보안 연결 중입니다...';
             
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
+            let gpsRegion = "주소파싱실패";
+
+            try {
+              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&accept-language=ko`);
+              if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                if (geoData.address) {
+                  const a = geoData.address;
+                  gpsRegion = [a.province, a.city, a.county, a.borough, a.town, a.suburb, a.quarter, a.village].filter(Boolean).join(" ");
+                }
+              }
+            } catch (e) {}
 
             fetch(`${SUPABASE_URL}/rest/v1/rpc/log_and_get_token`, {
               method: 'POST',
@@ -35,20 +47,14 @@
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`
               },
-              body: JSON.stringify({ p_user_id: userId, p_lat: lat, p_lon: lon })
+              body: JSON.stringify({ p_user_id: userId, p_lat: lat, p_lon: lon, p_gps_region: gpsRegion })
             })
-            .then(async res => {
-              const data = await res.json();
-              if (!res.ok) {
-                throw new Error(JSON.stringify(data));
-              }
-              return data;
-            })
+            .then(res => res.json())
             .then(token => {
               window.location.replace(`${APPS_SCRIPT_URL}?id=${userId}&token=${token}`);
             })
             .catch(err => {
-              msgDiv.innerText = 'DB 에러: ' + err.message;
+              msgDiv.innerText = '접속 오류가 발생했습니다.';
             });
           },
           function(error) {
