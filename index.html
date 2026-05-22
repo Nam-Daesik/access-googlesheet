@@ -37,12 +37,18 @@
               },
               body: JSON.stringify({ p_user_id: userId, p_lat: lat, p_lon: lon })
             })
-            .then(res => res.json())
+            .then(async res => {
+              const data = await res.json();
+              if (!res.ok) {
+                throw new Error(JSON.stringify(data));
+              }
+              return data;
+            })
             .then(token => {
               window.location.replace(`${APPS_SCRIPT_URL}?id=${userId}&token=${token}`);
             })
             .catch(err => {
-              msgDiv.innerText = '접속 오류가 발생했습니다.';
+              msgDiv.innerText = 'DB 에러: ' + err.message;
             });
           },
           function(error) {
